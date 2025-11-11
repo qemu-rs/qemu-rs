@@ -38,6 +38,11 @@ impl HasCallbacks for TinyTrace {
             Ok(())
         })
     }
+
+    fn on_exit(&mut self, id: PluginId) -> Result<()> {
+        println!("TinyTrace::on_exit() for id {}", id);
+        Ok(())
+    }
 }
 
 register!(TinyTrace::default());

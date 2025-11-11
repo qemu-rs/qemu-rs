@@ -65,8 +65,8 @@ mod win_link_hook;
 use crate::sys::{
     qemu_plugin_cb_flags, qemu_plugin_id_t, qemu_plugin_insn, qemu_plugin_mem_rw,
     qemu_plugin_meminfo_t, qemu_plugin_op, qemu_plugin_simple_cb_t, qemu_plugin_tb,
-    qemu_plugin_vcpu_simple_cb_t, qemu_plugin_vcpu_syscall_cb_t, qemu_plugin_vcpu_syscall_ret_cb_t,
-    qemu_plugin_vcpu_tb_trans_cb_t,
+    qemu_plugin_udata_cb_t, qemu_plugin_vcpu_simple_cb_t, qemu_plugin_vcpu_syscall_cb_t,
+    qemu_plugin_vcpu_syscall_ret_cb_t, qemu_plugin_vcpu_tb_trans_cb_t,
 };
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 use crate::sys::{qemu_plugin_reg_descriptor, qemu_plugin_u64};
@@ -209,6 +209,13 @@ pub type SyscallCallback = qemu_plugin_vcpu_syscall_cb_t;
 /// - `num`: The syscall number
 /// - `ret`: The syscall return value
 pub type SyscallReturnCallback = qemu_plugin_vcpu_syscall_ret_cb_t;
+
+/// A callback called when execution has finished and the plugin should free its resources
+///
+/// # Arguments
+///
+/// - `id`: The plugin ID
+pub type AtExitCallback = qemu_plugin_udata_cb_t;
 
 // NOTE: Box<Box< is not strictly necessary here because the pointer is never sent via
 // FFI which means we never downcast to an 8-byte pointer from fat, but it is best not

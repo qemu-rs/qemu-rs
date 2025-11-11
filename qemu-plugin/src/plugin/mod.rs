@@ -4,10 +4,11 @@ use std::sync::{Mutex, OnceLock};
 
 use crate::{
     Args, Error, Info, PluginId, Result, TranslationBlock, VCPUIndex,
-    qemu_plugin_register_flush_cb, qemu_plugin_register_vcpu_exit_cb,
-    qemu_plugin_register_vcpu_idle_cb, qemu_plugin_register_vcpu_init_cb,
-    qemu_plugin_register_vcpu_resume_cb, qemu_plugin_register_vcpu_syscall_cb,
-    qemu_plugin_register_vcpu_syscall_ret_cb, qemu_plugin_register_vcpu_tb_trans_cb,
+    qemu_plugin_register_atexit_cb, qemu_plugin_register_flush_cb,
+    qemu_plugin_register_vcpu_exit_cb, qemu_plugin_register_vcpu_idle_cb,
+    qemu_plugin_register_vcpu_init_cb, qemu_plugin_register_vcpu_resume_cb,
+    qemu_plugin_register_vcpu_syscall_cb, qemu_plugin_register_vcpu_syscall_ret_cb,
+    qemu_plugin_register_vcpu_tb_trans_cb,
 };
 
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_init_cb`
@@ -115,6 +116,22 @@ extern "C" fn handle_qemu_plugin_register_flush_cb(id: PluginId) {
     plugin
         .on_flush(id)
         .expect("Failed running callback on_flush");
+}
+
+/// Handler for callbacks registered via the `qemu_plugin_register_atexit_cb`
+/// function. These callbacks are called when execution has finished and plugins
+/// should free their resources.
+extern "C" fn handle_qemu_plugin_register_atexit_cb(id: PluginId, _udata: *mut std::ffi::c_void) {
+    // We don't actually need the userdata here, and we pass std::ptr::null_mut() when registering.
+    let Some(plugin) = PLUGIN.get() else {
+        panic!("Plugin not set");
+    };
+
+    let Ok(mut plugin) = plugin.lock() else {
+        panic!("Failed to lock plugin");
+    };
+
+    plugin.on_exit(id).expect("Failed running callback on_exit");
 }
 
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_syscall_cb`
@@ -250,6 +267,10 @@ pub trait Register: HasCallbacks + Send + Sync + 'static {
 
         qemu_plugin_register_flush_cb(id, Some(handle_qemu_plugin_register_flush_cb));
 
+        qemu_plugin_register_atexit_cb(id, |id| {
+            handle_qemu_plugin_register_atexit_cb(id, std::ptr::null_mut());
+        });
+
         qemu_plugin_register_vcpu_syscall_cb(id, Some(handle_qemu_plugin_register_syscall_cb));
 
         qemu_plugin_register_vcpu_syscall_ret_cb(
@@ -366,6 +387,16 @@ pub trait HasCallbacks: Send + Sync + 'static {
     ///
     /// * `id` - The ID of the plugin
     fn on_flush(&mut self, id: PluginId) -> Result<()> {
+        Ok(())
+    }
+
+    #[allow(unused)]
+    /// Callback triggered on exit
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the plugin
+    fn on_exit(&mut self, id: PluginId) -> Result<()> {
         Ok(())
     }
 
