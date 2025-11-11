@@ -13,6 +13,13 @@ use crate::Result;
     feature = "plugin-api-v0",
     feature = "plugin-api-v1",
     feature = "plugin-api-v2",
+    feature = "plugin-api-v3"
+)))]
+use crate::glib::{g_byte_array_free, g_byte_array_new};
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
     feature = "plugin-api-v3",
     feature = "plugin-api-v4"
 )))]
@@ -205,22 +212,40 @@ impl<'a> HwAddr<'a> {
 )))]
 /// Read memory from a virtual address. The address must be valid and mapped.
 pub fn qemu_plugin_read_memory_vaddr(addr: u64, buf: &mut [u8]) -> Result<()> {
-    let mut buf = GByteArray {
-        data: buf.as_mut_ptr(),
-        len: buf.len() as u32,
-    };
-
-    if unsafe {
-        crate::sys::qemu_plugin_read_memory_vaddr(
+    let mut g_buf = unsafe { g_byte_array_new() };
+    if g_buf.is_null() {
+        return Err(Error::VaddrReadError {
             addr,
-            &mut buf as *mut GByteArray,
-            buf.len as usize,
-        )
-    } {
+            len: buf.len() as u32,
+        });
+    }
+
+    let res = if unsafe { crate::sys::qemu_plugin_read_memory_vaddr(addr, g_buf, buf.len()) } {
+        // Upon success, copy the gbuf contents to the output slice
+        // SAFETY: qemu_plugin_read_memory_vaddr will ensure that the
+        // input g_buf has the proper size. We also use `buf.len()` as
+        // the upper bound, so worst case scenario it's uninit mem being
+        // copied into the output buffer (but that shouldn't happen!).
+        unsafe {
+            assert_eq!((*g_buf).len as usize, buf.len());
+            std::ptr::copy((*g_buf).data, buf.as_mut_ptr(), buf.len());
+        }
+
         Ok(())
     } else {
-        Err(Error::VaddrReadError { addr, len: buf.len })
+        Err(Error::VaddrReadError {
+            addr,
+            len: buf.len() as u32,
+        })
+    };
+
+    // SAFETY: `true` here will free the backing bytes if the refcount drops to zero,
+    // but they've already been copied to the caller's buffer.
+    unsafe {
+        g_byte_array_free(g_buf, true);
     }
+
+    res
 }
 
 #[cfg(not(any(
