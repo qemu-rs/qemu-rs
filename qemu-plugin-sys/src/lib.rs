@@ -23,3 +23,6 @@ include!("bindings_v4.rs");
 
 #[cfg(feature = "plugin-api-v5")]
 include!("bindings_v5.rs");
+
+#[cfg(feature = "plugin-api-v6")]
+include!("bindings_v6.rs");

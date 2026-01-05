@@ -21,10 +21,11 @@ serde_json = "1.0.143"
 tracer-events = { path = "../tracer-events" }
 
 [features]
-default = ["plugin-api-v5"]
+default = ["plugin-api-v6"]
 plugin-api-v0 = ["qemu-plugin/plugin-api-v5"]
 plugin-api-v1 = ["qemu-plugin/plugin-api-v1"]
 plugin-api-v2 = ["qemu-plugin/plugin-api-v2"]
 plugin-api-v3 = ["qemu-plugin/plugin-api-v3"]
 plugin-api-v4 = ["qemu-plugin/plugin-api-v4"]
 plugin-api-v5 = ["qemu-plugin/plugin-api-v5"]
+plugin-api-v6 = ["qemu-plugin/plugin-api-v6"]

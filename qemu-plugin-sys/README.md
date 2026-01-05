@@ -17,5 +17,5 @@ qemu-plugin-sys = { version = "9.0.0-v0", features = ["plugin-api-v2"], default-
 ```
 
 The `qemu-plugin-sys` crate's default plugin version is set to the latest version that
-is officially released in QEMU. Currently, this is V2, released in 8.2.4 and 9.0.0. If
-you need a different version, you *must* set `default-features = false`.
+is officially released in QEMU. If you need a different version, you *must* set `default-features = false`
+and explicitly set the `plugin-api-vX` value in your `Cargo.toml` file.

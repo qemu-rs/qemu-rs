@@ -19,7 +19,7 @@ anyhow = "1.0.99"
 non_snake_case = "allow"
 
 [features]
-default = ["plugin-api-v5"]
+default = ["plugin-api-v6"]
 # Use the V0 plugin API, which is defined starting in version 4.2.0
 plugin-api-v0 = []
 # Use the V1 plugin API, which is defined starting in version 6.0.0
@@ -32,3 +32,5 @@ plugin-api-v3 = []
 plugin-api-v4 = []
 # Use the V5 plugin API, which is defined starting in version 10.1.0
 plugin-api-v5 = []
+# Use the V6 plugin API, which is defined starting in version 10.2.0
+plugin-api-v6 = []
