@@ -16,6 +16,8 @@ pub const PLUGIN_API_DEF_FILE_NAME: &str = "qemu_plugin_api_v3.def";
 pub const PLUGIN_API_DEF_FILE_NAME: &str = "qemu_plugin_api_v4.def";
 #[cfg(feature = "plugin-api-v5")]
 pub const PLUGIN_API_DEF_FILE_NAME: &str = "qemu_plugin_api_v5.def";
+#[cfg(feature = "plugin-api-v6")]
+pub const PLUGIN_API_DEF_FILE_NAME: &str = "qemu_plugin_api_v6.def";
 
 #[cfg(windows)]
 fn out_dir() -> Result<PathBuf> {
