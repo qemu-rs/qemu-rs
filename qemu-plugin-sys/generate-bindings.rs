@@ -211,7 +211,7 @@ fn generate(tmp_dir: &Path, out_dir: &Path, version: usize) -> Result<()> {
 fn main() -> Result<()> {
     let metadata = MetadataCommand::new().no_deps().exec()?;
 
-    let search_package = "qemu-plugin-sys".parse()?;
+    let search_package = "qemu-plugin-sys";
     let package = metadata
         .packages
         .iter()
@@ -230,13 +230,10 @@ fn main() -> Result<()> {
     if !tmp_dir.exists() {
         create_dir_all(&tmp_dir)?;
     }
-
-    generate(&tmp_dir, &out_dir, 0)?;
-    generate(&tmp_dir, &out_dir, 1)?;
-    generate(&tmp_dir, &out_dir, 2)?;
-    generate(&tmp_dir, &out_dir, 3)?;
-    generate(&tmp_dir, &out_dir, 4)?;
-    generate(&tmp_dir, &out_dir, 5)?;
+    
+    for i in 0..QEMU_VERSIONS.len() {
+        generate(&tmp_dir, &out_dir, i)?;
+    }
 
     Ok(())
 }
