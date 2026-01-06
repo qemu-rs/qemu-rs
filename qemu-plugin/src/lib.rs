@@ -164,6 +164,26 @@ pub type VCPUIdleCallback = qemu_plugin_vcpu_simple_cb_t;
 /// - `vcpu_index`: The index of the vCPU that resumed
 pub type VCPUResumeCallback = qemu_plugin_vcpu_simple_cb_t;
 
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// A callback that can be called many times, each time a discontinuity occurs
+///
+/// # Arguments
+///
+/// - `id`: The plugin ID
+/// - `vcpu_index`: The index of the vCPU on which the discontinuity occurred
+/// - `type`: The type of discontinuity in execution
+/// - `from_pc`: The source of the discontinuity, e.g. the PC before the
+///   transition
+/// - `to_pc`: The PC pointing to the next instruction to be executed
+pub type VCPUDisconCallback = sys::qemu_plugin_vcpu_discon_cb_t;
+
 /// A callback that can be called many times, each time a translation occurs.  The
 /// callback is passed an opaque `qemu_plugin_tb` pointer, which can be queried for
 /// additional information including the list of translated instructions.  The callback
