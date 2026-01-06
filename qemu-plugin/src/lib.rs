@@ -62,6 +62,15 @@
 #[cfg(windows)]
 mod win_link_hook;
 
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+use crate::sys::qemu_plugin_discon_type;
 use crate::sys::{
     qemu_plugin_cb_flags, qemu_plugin_id_t, qemu_plugin_insn, qemu_plugin_mem_rw,
     qemu_plugin_meminfo_t, qemu_plugin_op, qemu_plugin_simple_cb_t, qemu_plugin_tb,
@@ -386,6 +395,31 @@ pub fn qemu_plugin_register_vcpu_resume_cb(
     cb: VCPUResumeCallback,
 ) -> Result<()> {
     unsafe { crate::sys::qemu_plugin_register_vcpu_resume_cb(id, cb) };
+    Ok(())
+}
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Register a callback to be called when an execution discontinuity occurs. The callback
+/// does not receive user data, so it is not possible to register it via closure.
+///
+/// # Arguments
+///
+/// - `id`: The plugin ID
+/// - `types`: The type(s) of discontinuities on wich to call the callback
+/// - `cb`: The callback to be called
+pub fn qemu_plugin_register_vcpu_discon_cb(
+    id: qemu_plugin_id_t,
+    types: qemu_plugin_discon_type,
+    cb: VCPUDisconCallback,
+) -> Result<()> {
+    unsafe { crate::sys::qemu_plugin_register_vcpu_discon_cb(id, types, cb) };
     Ok(())
 }
 
