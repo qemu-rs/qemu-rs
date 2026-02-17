@@ -360,6 +360,32 @@ pub trait Register: HasCallbacks + Send + Sync + 'static {
 
         qemu_plugin_register_vcpu_resume_cb(id, Some(handle_qemu_plugin_register_vcpu_resume_cb))?;
 
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        )))]
+        {
+            qemu_plugin_register_vcpu_discon_cb(
+                id,
+                qemu_plugin_discon_type::QEMU_PLUGIN_DISCON_INTERRUPT,
+                Some(handle_qemu_plugin_register_vcpu_interrupt),
+            )?;
+            qemu_plugin_register_vcpu_discon_cb(
+                id,
+                qemu_plugin_discon_type::QEMU_PLUGIN_DISCON_EXCEPTION,
+                Some(handle_qemu_plugin_register_vcpu_exception),
+            )?;
+            qemu_plugin_register_vcpu_discon_cb(
+                id,
+                qemu_plugin_discon_type::QEMU_PLUGIN_DISCON_HOSTCALL,
+                Some(handle_qemu_plugin_register_vcpu_hostcall),
+            )?;
+        }
+
         qemu_plugin_register_vcpu_tb_trans_cb(
             id,
             Some(handle_qemu_plugin_register_vcpu_tb_trans_cb),
