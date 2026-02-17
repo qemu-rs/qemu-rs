@@ -101,12 +101,41 @@ impl<'a> RegisterDescriptor<'a> {
             qemu_plugin_read_register(self.handle as *mut qemu_plugin_register, byte_array)
         };
 
-        if result == -1 {
+        // Return type of read_register() was changed in this commit, from int to bool
+        // https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
+        #[cfg(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        ))]
+        let error_value: int = -1;
+
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        )))]
+        let error_value: bool = false;
+
+        if result == error_value {
             return Err(Error::RegisterReadError {
                 name: self.name.clone(),
             });
         }
 
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4"
+        )))]
         let mut data = Vec::new();
         data.extend_from_slice(unsafe {
             std::slice::from_raw_parts((*byte_array).data, (*byte_array).len as usize)
@@ -137,9 +166,34 @@ impl<'a> RegisterDescriptor<'a> {
             data: data.as_mut_ptr(),
             len: data.len() as u32,
         };
-        if unsafe { qemu_plugin_write_register(self.handle as *mut _, &mut buf as *mut GByteArray) }
-            == 0
-        {
+
+        let result = unsafe {
+            qemu_plugin_write_register(self.handle as *mut _, &mut buf as *mut GByteArray)
+        };
+
+        // Return type of write_register() was changed in this commit, from int to bool
+        // https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
+        #[cfg(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        ))]
+        let error_value: int = -1;
+
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        )))]
+        let error_value: bool = false;
+
+        if result == error_value {
             Err(Error::RegisterWriteError {
                 name: self.name.clone(),
             })
