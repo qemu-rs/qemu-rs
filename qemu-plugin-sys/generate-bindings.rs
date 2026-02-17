@@ -13,19 +13,19 @@ zip = "*"
 non_snake_case = "allow"
 ---
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bindgen::{
-    builder, AliasVariation, EnumVariation, FieldVisibilityKind, MacroTypeVariation,
-    NonCopyUnionStyle,
+    AliasVariation, EnumVariation, FieldVisibilityKind, MacroTypeVariation, NonCopyUnionStyle,
+    builder,
 };
 use cargo_metadata::MetadataCommand;
 use reqwest::blocking::get;
 use std::{
-    fs::{create_dir_all, read_to_string, write, File, OpenOptions},
+    fs::{File, OpenOptions, create_dir_all, read_to_string, write},
     io::copy,
     path::{Path, PathBuf},
 };
-use syn::{parse_str, File as RustFile, ForeignItem, ForeignItemFn, Item, ItemForeignMod};
+use syn::{File as RustFile, ForeignItem, ForeignItemFn, Item, ItemForeignMod, parse_str};
 use zip::ZipArchive;
 
 const QEMU_GITHUB_URL_BASE: &str = "https://github.com/qemu/qemu/";
@@ -43,6 +43,13 @@ const QEMU_VERSIONS: &[&str] = &[
     "595cd9ce2ec9330882c991a647d5bc2a5640f380",
     // Plugin V5 is from 10.1.0
     "f8b2f64e2336a28bf0d50b6ef8a7d8c013e9bcf3",
+    // Plugin V6 is from 10.2.1+ era
+    // https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
+    "c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b",
+    // Plugins .h moved in this commit, but not yet a new V7 released with that change.
+    // Uncomment to test future/V7 generation, from header file in new location.
+    // https://github.com/qemu/qemu/commit/cab15547f1fe300fec91966eec05932212d6d6e1
+    // "cab15547f1fe300fec91966eec05932212d6d6e1",
 ];
 
 fn qemu_git_url(hash: &str) -> String {
@@ -199,8 +206,21 @@ fn generate(tmp_dir: &Path, out_dir: &Path, version: usize) -> Result<()> {
         extract_zip(&src_archive, &src_dir)?;
     }
 
+    let old_plugin_h = src_dir.join("include").join("qemu").join("qemu-plugin.h");
+    let new_plugin_h = src_dir
+        .join("include")
+        .join("plugins")
+        .join("qemu-plugin.h");
+
+    let plugin_h = if old_plugin_h.exists() {
+        old_plugin_h
+    } else {
+        new_plugin_h
+    };
+
+    // TODO: change location of header file here for newer versions?
     generate_bindings(
-        &src_dir.join("include").join("qemu").join("qemu-plugin.h"),
+        &plugin_h,
         &out_dir.join(&format!("bindings_v{}.rs", version)),
         &out_dir.join(&format!("qemu_plugin_api_v{}.def", version)),
     )?;
@@ -230,7 +250,7 @@ fn main() -> Result<()> {
     if !tmp_dir.exists() {
         create_dir_all(&tmp_dir)?;
     }
-    
+
     for i in 0..QEMU_VERSIONS.len() {
         generate(&tmp_dir, &out_dir, i)?;
     }
