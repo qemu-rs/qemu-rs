@@ -119,6 +119,36 @@ extern "C" fn handle_qemu_plugin_register_vcpu_interrupt(
         .expect("Failed running callback on_vcpu_interrupt");
 }
 
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Handler for callbacks registered via the `qemu_plugin_register_vcpu_discon_cb`
+/// function for exceptions.
+extern "C" fn handle_qemu_plugin_register_vcpu_exception(
+    id: PluginId,
+    vcpu_id: VCPUIndex,
+    _: qemu_plugin_discon_type,
+    from_pc: u64,
+    to_pc: u64,
+) {
+    let Some(plugin) = PLUGIN.get() else {
+        panic!("Plugin not set");
+    };
+
+    let Ok(mut plugin) = plugin.lock() else {
+        panic!("Failed to lock plugin");
+    };
+
+    plugin
+        .on_vcpu_exception(id, vcpu_id, from_pc, to_pc)
+        .expect("Failed running callback on_vcpu_exception");
+}
+
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_tb_trans_cb`
 /// function. These callbacks are called when a translation block is translated in QEMU
 /// and pass an opaque pointer to the translation block.
@@ -428,6 +458,33 @@ pub trait HasCallbacks: Send + Sync + 'static {
     ///               next, had the interrupt not occurred.
     /// * `to_pc` - The PC of the instruction that the interrupt trapped to
     fn on_vcpu_interrupt(
+        &mut self,
+        id: PluginId,
+        vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    #[allow(unused)]
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5"
+    )))]
+    /// Callback triggered on vCPU exceptions
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the plugin
+    /// * `vcpu_id` - The ID of the vCPU
+    /// * `from_pc` - The PC of the instruction that caused the exception
+    /// * `to_pc` - The PC of the instruction that the exception trapped to
+    fn on_vcpu_exception(
         &mut self,
         id: PluginId,
         vcpu_id: VCPUIndex,
