@@ -84,8 +84,10 @@ EOF
 
 ## Versions
 
-QEMU versions its plugin API --- plugins are mostly forward compatible but
-are not backward compatible.
+QEMU versions its plugin API --- the API of each version for the plugins are very similar
+but they are *not* 100% stable between versions. They are mostly forward compatible but
+are not backward compatible. It is *STRONGLY* encouraged to target the exact version of
+QEMU for correctness. Some discussions here on [the QEMU mailing list](https://lore.kernel.org/qemu-devel/dfb3afd3-af50-4a14-afe4-fddd8adc5040@linaro.org/) around the V5 to V6 compatibility topic.
 
 The following QEMU versions introduce the corresponding plugin API versions.
 
@@ -97,3 +99,4 @@ The following QEMU versions introduce the corresponding plugin API versions.
 | 9.1.0        | 3                  |
 | 9.2.0        | 4                  |
 | 10.1.0       | 5                  |
+| 11.0         | 6 (Incompatible with V5)|

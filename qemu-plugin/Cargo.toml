@@ -43,7 +43,7 @@ plugin-api-v3 = ["qemu-plugin-sys/plugin-api-v3"]
 plugin-api-v4 = ["qemu-plugin-sys/plugin-api-v4"]
 # Use the V5 plugin API, which is defined starting in version 10.1.0
 plugin-api-v5 = ["qemu-plugin-sys/plugin-api-v5"]
-# Use the V6 plugin API, which is defined starting in version TODO/10.2.0
+# Use the V6 plugin API, which is defined starting in version 11.0
 plugin-api-v6 = ["qemu-plugin-sys/plugin-api-v6"]
 
 # Enable the `num-traits` dependency, which enables endian-aware register read
