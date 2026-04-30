@@ -196,14 +196,16 @@ impl Default for qemu_plugin_u64 {
     }
 }
 #[repr(u32)]
-#[doc = " enum qemu_plugin_cb_flags - type of callback\n\n @QEMU_PLUGIN_CB_NO_REGS: callback does not access the CPU's regs\n @QEMU_PLUGIN_CB_R_REGS: callback reads the CPU's regs\n @QEMU_PLUGIN_CB_RW_REGS: callback reads and writes the CPU's regs"]
+#[doc = " enum qemu_plugin_cb_flags - type of callback\n\n @QEMU_PLUGIN_CB_NO_REGS: callback does not access the CPU's regs\n @QEMU_PLUGIN_CB_R_REGS: callback reads the CPU's regs\n @QEMU_PLUGIN_CB_RW_REGS: callback reads and writes the CPU's regs\n @QEMU_PLUGIN_CB_RW_REGS_PC: callback reads and writes the CPU's\n                             regs and updates the PC"]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum qemu_plugin_cb_flags {
     QEMU_PLUGIN_CB_NO_REGS = 0,
     QEMU_PLUGIN_CB_R_REGS = 1,
     QEMU_PLUGIN_CB_RW_REGS = 2,
+    QEMU_PLUGIN_CB_RW_REGS_PC = 3,
 }
 #[repr(u32)]
+#[doc = " enum qemu_plugin_mem_rw - type of memory access\n\n @QEMU_PLUGIN_MEM_R: memory read access only\n @QEMU_PLUGIN_MEM_W: memory write access only\n @QEMU_PLUGIN_MEM_RW: memory read and write access"]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum qemu_plugin_mem_rw {
     QEMU_PLUGIN_MEM_R = 1,
@@ -211,6 +213,7 @@ pub enum qemu_plugin_mem_rw {
     QEMU_PLUGIN_MEM_RW = 3,
 }
 #[repr(u32)]
+#[doc = " enum qemu_plugin_mem_value_type - size of memory value\n\n @QEMU_PLUGIN_MEM_VALUE_U8: unsigned 8-bit value\n @QEMU_PLUGIN_MEM_VALUE_U16: unsigned 16-bit value\n @QEMU_PLUGIN_MEM_VALUE_U32: unsigned 32-bit value\n @QEMU_PLUGIN_MEM_VALUE_U64: unsigned 64-bit value\n @QEMU_PLUGIN_MEM_VALUE_U128: unsigned 128-bit value"]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum qemu_plugin_mem_value_type {
     QEMU_PLUGIN_MEM_VALUE_U8 = 0,
@@ -219,7 +222,7 @@ pub enum qemu_plugin_mem_value_type {
     QEMU_PLUGIN_MEM_VALUE_U64 = 3,
     QEMU_PLUGIN_MEM_VALUE_U128 = 4,
 }
-#[doc = " typedef qemu_plugin_mem_value - value accessed during a load/store"]
+#[doc = " typedef qemu_plugin_mem_value - value accessed during a load/store\n\n @type: the memory access size\n @data: the value accessed during the memory operation (value after\n        read/write). It's directly stored following host endianness, so no\n        further swap is needed."]
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct qemu_plugin_mem_value {
@@ -406,7 +409,7 @@ unsafe extern "C" {
     pub fn qemu_plugin_mem_is_store(info: qemu_plugin_meminfo_t) -> bool;
 }
 unsafe extern "C" {
-    #[doc = " qemu_plugin_mem_get_value() - return last value loaded/stored\n @info: opaque memory transaction handle\n\n Returns: memory value"]
+    #[doc = " qemu_plugin_mem_get_value() - return last value loaded/stored\n @info: opaque memory transaction handle\n\n Returns: memory value in host-endian order (no further swap is necessary)."]
     pub fn qemu_plugin_mem_get_value(info: qemu_plugin_meminfo_t) -> qemu_plugin_mem_value;
 }
 unsafe extern "C" {
@@ -467,6 +470,7 @@ unsafe extern "C" {
     #[doc = " qemu_plugin_update_ns() - update system emulation time\n @handle: opaque handle returned by qemu_plugin_request_time_control()\n @time: time in nanoseconds\n\n This allows an appropriately authorised plugin (i.e. holding the\n time control handle) to move system time forward to @time. For\n user-mode emulation the time is not changed by this as all reported\n time comes from the host kernel.\n\n Start time is 0."]
     pub fn qemu_plugin_update_ns(handle: *const ::std::os::raw::c_void, time: i64);
 }
+#[doc = " typedef qemu_plugin_vcpu_syscall_cb_t - vCPU syscall callback function type\n @id: plugin id\n @vcpu_index: the executing vCPU\n @num: the syscall number\n @a1: the 1st syscall argument\n @a2: the 2nd syscall argument\n @a3: the 3rd syscall argument\n @a4: the 4th syscall argument\n @a5: the 5th syscall argument\n @a6: the 6th syscall argument\n @a7: the 7th syscall argument\n @a8: the 8th syscall argument"]
 pub type qemu_plugin_vcpu_syscall_cb_t = ::std::option::Option<
     unsafe extern "C" fn(
         id: qemu_plugin_id_t,
@@ -499,30 +503,34 @@ pub type qemu_plugin_vcpu_syscall_filter_cb_t = ::std::option::Option<
         sysret: *mut u64,
     ) -> bool,
 >;
-unsafe extern "C" {
-    pub fn qemu_plugin_register_vcpu_syscall_cb(
-        id: qemu_plugin_id_t,
-        cb: qemu_plugin_vcpu_syscall_cb_t,
-    );
-}
+#[doc = " typedef qemu_plugin_vcpu_syscall_ret_cb_t - vCPU syscall return callback\n function type\n @id: plugin id\n @vcpu_index: the executing vCPU\n @num: the syscall number\n @ret: the syscall return value"]
 pub type qemu_plugin_vcpu_syscall_ret_cb_t = ::std::option::Option<
     unsafe extern "C" fn(
         id: qemu_plugin_id_t,
-        vcpu_idx: ::std::os::raw::c_uint,
+        vcpu_index: ::std::os::raw::c_uint,
         num: i64,
         ret: i64,
     ),
 >;
 unsafe extern "C" {
-    pub fn qemu_plugin_register_vcpu_syscall_ret_cb(
+    #[doc = " qemu_plugin_register_vcpu_syscall_cb() - register a syscall entry callback\n @id: plugin id\n @cb: callback of type qemu_plugin_vcpu_syscall_cb_t\n\n This registers a callback for every syscall executed by the guest. The @cb\n function is executed before a syscall is handled by the host."]
+    pub fn qemu_plugin_register_vcpu_syscall_cb(
         id: qemu_plugin_id_t,
-        cb: qemu_plugin_vcpu_syscall_ret_cb_t,
+        cb: qemu_plugin_vcpu_syscall_cb_t,
     );
 }
 unsafe extern "C" {
+    #[doc = " qemu_plugin_register_vcpu_syscall_filter_cb() - register a syscall filter\n callback\n @id: plugin id\n @cb: callback of type qemu_plugin_vcpu_syscall_filter_cb_t\n\n This registers a callback for every syscall executed by the guest. The @cb\n function is executed before a syscall is handled by the host. If the\n callback returns true, the syscall is filtered and will not be executed by\n the host. The callback must then set the syscall return value via the\n corresponding pointer passed to it."]
     pub fn qemu_plugin_register_vcpu_syscall_filter_cb(
         id: qemu_plugin_id_t,
         cb: qemu_plugin_vcpu_syscall_filter_cb_t,
+    );
+}
+unsafe extern "C" {
+    #[doc = " qemu_plugin_register_vcpu_syscall_ret_cb() - register a syscall entry\n callback\n @id: plugin id\n @cb: callback of type qemu_plugin_vcpu_syscall_ret_cb_t\n\n This registers a callback for every syscall executed by the guest. The @cb\n function is executed upon return from the host syscall before execution is\n handed back to the guest."]
+    pub fn qemu_plugin_register_vcpu_syscall_ret_cb(
+        id: qemu_plugin_id_t,
+        cb: qemu_plugin_vcpu_syscall_ret_cb_t,
     );
 }
 unsafe extern "C" {
@@ -538,6 +546,7 @@ unsafe extern "C" {
     pub fn qemu_plugin_vcpu_for_each(id: qemu_plugin_id_t, cb: qemu_plugin_vcpu_simple_cb_t);
 }
 unsafe extern "C" {
+    #[doc = " qemu_plugin_register_flush_cb() - register code cache flush callback\n @id: plugin ID\n @cb: callback\n\n The @cb function is called every time the code cache is flushed.\n The callback can be used to free resources associated with existing\n translated blocks in a plugin. @cb is guaranteed to run with all cpus being\n stopped, thus no lock is required within it."]
     pub fn qemu_plugin_register_flush_cb(id: qemu_plugin_id_t, cb: qemu_plugin_simple_cb_t);
 }
 unsafe extern "C" {
@@ -586,13 +595,14 @@ unsafe extern "C" {
 pub struct qemu_plugin_register {
     _unused: [u8; 0],
 }
-#[doc = " typedef qemu_plugin_reg_descriptor - register descriptions\n\n @handle: opaque handle for retrieving value with qemu_plugin_read_register or\n          writing value with qemu_plugin_write_register\n @name: register name\n @feature: optional feature descriptor, can be NULL"]
+#[doc = " typedef qemu_plugin_reg_descriptor - register descriptions\n\n @handle: opaque handle for retrieving value with qemu_plugin_read_register or\n          writing value with qemu_plugin_write_register\n @name: register name\n @feature: optional feature descriptor, can be NULL\n @is_readonly: true if the register cannot be written via\n               qemu_plugin_write_register"]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct qemu_plugin_reg_descriptor {
     pub handle: *mut qemu_plugin_register,
     pub name: *const ::std::os::raw::c_char,
     pub feature: *const ::std::os::raw::c_char,
+    pub is_readonly: bool,
 }
 impl Default for qemu_plugin_reg_descriptor {
     fn default() -> Self {
@@ -615,11 +625,15 @@ unsafe extern "C" {
     ) -> bool;
 }
 unsafe extern "C" {
-    #[doc = " qemu_plugin_write_register() - write register for current vCPU\n\n @handle: a @qemu_plugin_reg_handle handle\n @buf: A GByteArray for the data owned by the plugin\n\n This function is only available in a context that register read access is\n explicitly requested via the QEMU_PLUGIN_CB_RW_REGS flag, if called inside a\n callback that can be registered with a qemu_plugin_cb_flags argument. This\n function can also be used in any callback context that does not use a flags\n argument, such as in a callback registered with\n qemu_plugin_register_vcpu_init_cb(), except for callbacks registered with\n qemu_plugin_register_atexit_cb() and qemu_plugin_register_flush_cb().\n\n The size of @buf must be at least the size of the requested register.\n Attempting to write a register with @buf smaller than the register size\n will result in a crash or other undesired behavior.\n\n Returns true on sucess, false on failure."]
+    #[doc = " qemu_plugin_write_register() - write register for current vCPU\n\n @handle: a @qemu_plugin_reg_handle handle\n @buf: A GByteArray for the data owned by the plugin\n\n This function is only available in a context that register read access is\n explicitly requested via the QEMU_PLUGIN_CB_RW_REGS flag, if called inside a\n callback that can be registered with a qemu_plugin_cb_flags argument. This\n function can also be used in any callback context that does not use a flags\n argument, such as in a callback registered with\n qemu_plugin_register_vcpu_init_cb(), except for callbacks registered with\n qemu_plugin_register_atexit_cb() and qemu_plugin_register_flush_cb().\n\n The size of @buf must be at least the size of the requested register.\n Attempting to write a register with @buf smaller than the register size\n will result in a crash or other undesired behavior.\n\n Returns true on success, false on failure."]
     pub fn qemu_plugin_write_register(
         handle: *mut qemu_plugin_register,
         buf: *mut GByteArray,
     ) -> bool;
+}
+unsafe extern "C" {
+    #[doc = " qemu_plugin_set_pc() - set the program counter for the current vCPU\n\n @vaddr: the new virtual (guest) address for the program counter\n\n This function sets the program counter for the current vCPU to @vaddr and\n resumes execution at that address. This function does not return."]
+    pub fn qemu_plugin_set_pc(vaddr: u64) -> !;
 }
 unsafe extern "C" {
     #[doc = " qemu_plugin_read_memory_vaddr() - read from memory using a virtual address\n\n @addr: A virtual address to read from\n @data: A byte array to store data into\n @len: The number of bytes to read, starting from @addr\n\n @len bytes of data is read starting at @addr and stored into @data. If @data\n is not large enough to hold @len bytes, it will be expanded to the necessary\n size, reallocating if necessary. @len must be greater than 0.\n\n This function does not ensure writes are flushed prior to reading, so\n callers should take care when calling this function in plugin callbacks to\n avoid attempting to read data which may not yet be written and should use\n the memory callback API instead.\n\n Returns true on success and false on failure."]
