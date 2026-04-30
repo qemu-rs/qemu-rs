@@ -45,11 +45,14 @@ const QEMU_VERSIONS: &[&str] = &[
     "f8b2f64e2336a28bf0d50b6ef8a7d8c013e9bcf3",
     // Plugin V6 is from 10.2.1+ era
     // https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
-    "c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b",
+    // "c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b",
+    //
     // Plugins .h moved in this commit, but not yet a new V7 released with that change.
     // Uncomment to test future/V7 generation, from header file in new location.
     // https://github.com/qemu/qemu/commit/cab15547f1fe300fec91966eec05932212d6d6e1
-    // "cab15547f1fe300fec91966eec05932212d6d6e1",
+    //
+    // Plugin V6 first official release: v11
+    "98b060da3a4f92b2a994ead5b16a87e783baf77c",
 ];
 
 fn qemu_git_url(hash: &str) -> String {
