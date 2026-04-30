@@ -83,6 +83,8 @@ jobs:
             commit: 595cd9ce2ec9330882c991a647d5bc2a5640f380
           - version: 5
             commit: f8b2f64e2336a28bf0d50b6ef8a7d8c013e9bcf3
+          - version: 6
+            commit: 98b060da3a4f92b2a994ead5b16a87e783baf77c
 
     env:
       QEMU_COMMIT_HASH: ${{ matrix.commit }}

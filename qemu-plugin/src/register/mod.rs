@@ -82,6 +82,33 @@ impl<'a> Debug for RegisterDescriptor<'a> {
     }
 }
 
+// QEMU changes return type for qemu_plugin_read_register() from V5 -> V6
+// As a result, we have a different *type* being returned: V5 int, V6 bool
+// These constant values allow the code below to compare against "error value"
+// And error value will have the correct type for the given API version selected.
+// Details:
+// Commit: https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
+// Discussion: https://lore.kernel.org/qemu-devel/dfb3afd3-af50-4a14-afe4-fddd8adc5040@linaro.org/
+#[cfg(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+))]
+const REG_READ_ERROR_VALUE: i32 = -1;
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+const REG_READ_ERROR_VALUE: bool = false;
+
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 impl<'a> RegisterDescriptor<'a> {
     /// Read a register value
@@ -101,41 +128,12 @@ impl<'a> RegisterDescriptor<'a> {
             qemu_plugin_read_register(self.handle as *mut qemu_plugin_register, byte_array)
         };
 
-        // Return type of read_register() was changed in this commit, from int to bool
-        // https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
-        #[cfg(any(
-            feature = "plugin-api-v0",
-            feature = "plugin-api-v1",
-            feature = "plugin-api-v2",
-            feature = "plugin-api-v3",
-            feature = "plugin-api-v4",
-            feature = "plugin-api-v5"
-        ))]
-        let error_value: int = -1;
-
-        #[cfg(not(any(
-            feature = "plugin-api-v0",
-            feature = "plugin-api-v1",
-            feature = "plugin-api-v2",
-            feature = "plugin-api-v3",
-            feature = "plugin-api-v4",
-            feature = "plugin-api-v5"
-        )))]
-        let error_value: bool = false;
-
-        if result == error_value {
+        if result == REG_READ_ERROR_VALUE {
             return Err(Error::RegisterReadError {
                 name: self.name.clone(),
             });
         }
 
-        #[cfg(not(any(
-            feature = "plugin-api-v0",
-            feature = "plugin-api-v1",
-            feature = "plugin-api-v2",
-            feature = "plugin-api-v3",
-            feature = "plugin-api-v4"
-        )))]
         let mut data = Vec::new();
         data.extend_from_slice(unsafe {
             std::slice::from_raw_parts((*byte_array).data, (*byte_array).len as usize)
@@ -171,29 +169,7 @@ impl<'a> RegisterDescriptor<'a> {
             qemu_plugin_write_register(self.handle as *mut _, &mut buf as *mut GByteArray)
         };
 
-        // Return type of write_register() was changed in this commit, from int to bool
-        // https://github.com/qemu/qemu/commit/c22ea55b3be01b1798bc6b9cf1311d9a5e58c68b
-        #[cfg(any(
-            feature = "plugin-api-v0",
-            feature = "plugin-api-v1",
-            feature = "plugin-api-v2",
-            feature = "plugin-api-v3",
-            feature = "plugin-api-v4",
-            feature = "plugin-api-v5"
-        ))]
-        let error_value: int = -1;
-
-        #[cfg(not(any(
-            feature = "plugin-api-v0",
-            feature = "plugin-api-v1",
-            feature = "plugin-api-v2",
-            feature = "plugin-api-v3",
-            feature = "plugin-api-v4",
-            feature = "plugin-api-v5"
-        )))]
-        let error_value: bool = false;
-
-        if result == error_value {
+        if result == REG_READ_ERROR_VALUE {
             Err(Error::RegisterWriteError {
                 name: self.name.clone(),
             })
