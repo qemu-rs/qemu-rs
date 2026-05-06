@@ -270,7 +270,7 @@ jobs:
     runs-on: windows-latest
 
     env:
-      QEMU_VERSION: "10.1.0-1"
+      QEMU_VERSION: "11.0.0-1"
       RUSTUP_URL: "https://win.rustup.rs/x86_64"
       FEDORA_CLOUDIMG_URL: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
 
