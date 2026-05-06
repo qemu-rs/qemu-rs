@@ -216,7 +216,7 @@ jobs:
       - name: Install QEMU Build Dependencies
         run: |
           brew update
-          brew install pkg-config glib pixman gettext meson ninja python coreutils
+          brew install pkg-config glib pixman gettext meson ninja python coreutils sphinx-doc
 
       - name: Cache QEMU
         id: qemu-cache-macos
@@ -236,7 +236,10 @@ jobs:
         if: steps.qemu-cache-macos.outputs.cache-hit != 'true'
         run: |
           cd qemu-upstream
-          ./configure --enable-plugins --target-list="x86_64-linux-user x86_64-softmmu"
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python3 -m pip install sphinx sphinx_rtd_theme
+          ./configure --enable-plugins --target-list="x86_64-softmmu"
           make -C build -j"$(sysctl -n hw.logicalcpu)"
 
       - name: Test QEMU Install
