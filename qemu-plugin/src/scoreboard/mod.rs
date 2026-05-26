@@ -2,6 +2,7 @@
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 use crate::VCPUIndex;
+use crate::error::Error;
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 use crate::sys::{qemu_plugin_scoreboard, qemu_plugin_u64};
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
@@ -45,6 +46,20 @@ impl<'a, T> Scoreboard<'a, T> {
                 vcpu_index,
             ) as *mut MaybeUninit<T>)
         }
+    }
+
+    /// Create a [`PluginU64`] pointing to offset into this scoreboard's entries
+    pub fn entry(&mut self, offset: usize) -> Result<PluginU64<'_>, Error> {
+        let entry_size = std::mem::size_of::<T>();
+        (offset.saturating_add(8) <= entry_size)
+            .then_some(PluginU64 {
+                inner: qemu_plugin_u64 {
+                    score: self.handle as *mut qemu_plugin_scoreboard,
+                    offset,
+                },
+                marker: Default::default(),
+            })
+            .ok_or(Error::InvalidScoreBoardEntryOffset { offset, entry_size })
     }
 }
 
