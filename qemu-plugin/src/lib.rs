@@ -930,6 +930,7 @@ pub fn qemu_plugin_get_registers<'a>() -> Result<Vec<RegisterDescriptor<'a>>> {
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
+#[deprecated(since = "10.2.0", note = "Use PluginU64::add instead")]
 /// Add a value to a `PluginU64` for a given VCPU
 pub fn qemu_plugin_u64_add(entry: PluginU64, vcpu_index: VCPUIndex, added: u64) -> Result<()> {
     unsafe { crate::sys::qemu_plugin_u64_add(entry.inner, vcpu_index, added) };
@@ -937,18 +938,21 @@ pub fn qemu_plugin_u64_add(entry: PluginU64, vcpu_index: VCPUIndex, added: u64) 
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
+#[deprecated(since = "10.2.0", note = "Use PluginU64::get instead")]
 /// Get the value of a `PluginU64` for a given VCPU
 pub fn qemu_plugin_u64_get(entry: PluginU64, vcpu_index: VCPUIndex) -> u64 {
     unsafe { crate::sys::qemu_plugin_u64_get(entry.inner, vcpu_index) }
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
+#[deprecated(since = "10.2.0", note = "Use PluginU64::set instead")]
 /// Set the value of a `PluginU64` for a given VCPU
 pub fn qemu_plugin_u64_set(entry: PluginU64, vcpu_index: VCPUIndex, value: u64) {
     unsafe { crate::sys::qemu_plugin_u64_set(entry.inner, vcpu_index, value) }
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
+#[deprecated(since = "10.2.0", note = "Use PluginU64::sum instead")]
 /// Get the sum of all VCPU entries in a scoreboard
 pub fn qemu_plugin_scoreboard_sum(entry: PluginU64) -> u64 {
     unsafe { crate::sys::qemu_plugin_u64_sum(entry.inner) }
