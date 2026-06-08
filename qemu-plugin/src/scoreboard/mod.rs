@@ -3,7 +3,7 @@
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 use crate::VCPUIndex;
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-use crate::sys::qemu_plugin_scoreboard;
+use crate::sys::{qemu_plugin_scoreboard, qemu_plugin_u64};
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 use std::{marker::PhantomData, mem::MaybeUninit};
 
@@ -61,5 +61,38 @@ impl<'a, T> Drop for Scoreboard<'a, T> {
         unsafe {
             crate::sys::qemu_plugin_scoreboard_free(self.handle as *mut qemu_plugin_scoreboard)
         }
+    }
+}
+
+/// `u64` within a [`Scoreboard`]'s entries
+///
+/// Addresses an `u64` member of an entry in a scoreboard, allows access to a
+/// specific u64 member in one given entry, located at a specified offset.
+/// Inline operations expect this as an entry.
+#[derive(Copy, Clone, Debug)]
+pub struct PluginU64<'s> {
+    pub(crate) inner: qemu_plugin_u64,
+    marker: std::marker::PhantomData<&'s ()>,
+}
+
+impl PluginU64<'_> {
+    /// Get the value for a given VCPU
+    pub fn get(self, vcpu_index: VCPUIndex) -> u64 {
+        unsafe { crate::sys::qemu_plugin_u64_get(self.inner, vcpu_index) }
+    }
+
+    /// Set the value for a given VCPU
+    pub fn set(self, vcpu_index: VCPUIndex, value: u64) {
+        unsafe { crate::sys::qemu_plugin_u64_set(self.inner, vcpu_index, value) }
+    }
+
+    /// Add a value for a given VCPU
+    pub fn add(self, vcpu_index: VCPUIndex, value: u64) {
+        unsafe { crate::sys::qemu_plugin_u64_add(self.inner, vcpu_index, value) }
+    }
+
+    /// Get the sum of all VCPU entries for this value
+    pub fn sum(self) -> u64 {
+        unsafe { crate::sys::qemu_plugin_u64_sum(self.inner) }
     }
 }
