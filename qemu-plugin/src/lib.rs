@@ -62,14 +62,14 @@
 #[cfg(windows)]
 mod win_link_hook;
 
+#[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
+use crate::sys::qemu_plugin_reg_descriptor;
 use crate::sys::{
     qemu_plugin_cb_flags, qemu_plugin_id_t, qemu_plugin_insn, qemu_plugin_mem_rw,
     qemu_plugin_meminfo_t, qemu_plugin_op, qemu_plugin_simple_cb_t, qemu_plugin_tb,
     qemu_plugin_udata_cb_t, qemu_plugin_vcpu_simple_cb_t, qemu_plugin_vcpu_syscall_cb_t,
     qemu_plugin_vcpu_syscall_ret_cb_t, qemu_plugin_vcpu_tb_trans_cb_t,
 };
-#[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-use crate::sys::{qemu_plugin_reg_descriptor, qemu_plugin_u64};
 #[cfg(not(any(
     feature = "plugin-api-v0",
     feature = "plugin-api-v1",
@@ -111,11 +111,6 @@ pub(crate) use glib::*;
 
 /// The index of a vCPU
 pub type VCPUIndex = c_uint;
-#[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-/// u64 member of an entry in a scoreboard, allows access to a specific u64 member in
-/// one given entry, located at a specified offset. Inline operations expect this as an
-/// entry.
-pub type PluginU64 = qemu_plugin_u64;
 /// Flags for callbacks
 pub type CallbackFlags = qemu_plugin_cb_flags;
 /// Memory read/write flags
@@ -494,7 +489,7 @@ pub fn qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu(
         crate::sys::qemu_plugin_register_vcpu_tb_exec_inline_per_vcpu(
             tb.translation_block as *mut qemu_plugin_tb,
             op,
-            entry,
+            entry.inner,
             imm,
         );
     }
@@ -600,7 +595,7 @@ pub fn qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu(
         crate::sys::qemu_plugin_register_vcpu_insn_exec_inline_per_vcpu(
             insn.instruction as *mut qemu_plugin_insn,
             op,
-            entry,
+            entry.inner,
             imm,
         );
     }
@@ -692,7 +687,7 @@ pub fn qemu_plugin_register_vcpu_mem_inline_per_vcpu(
             insn.instruction as *mut qemu_plugin_insn,
             rw,
             op,
-            entry,
+            entry.inner,
             imm,
         );
     }
@@ -937,24 +932,24 @@ pub fn qemu_plugin_get_registers<'a>() -> Result<Vec<RegisterDescriptor<'a>>> {
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 /// Add a value to a `PluginU64` for a given VCPU
 pub fn qemu_plugin_u64_add(entry: PluginU64, vcpu_index: VCPUIndex, added: u64) -> Result<()> {
-    unsafe { crate::sys::qemu_plugin_u64_add(entry, vcpu_index, added) };
+    unsafe { crate::sys::qemu_plugin_u64_add(entry.inner, vcpu_index, added) };
     Ok(())
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 /// Get the value of a `PluginU64` for a given VCPU
 pub fn qemu_plugin_u64_get(entry: PluginU64, vcpu_index: VCPUIndex) -> u64 {
-    unsafe { crate::sys::qemu_plugin_u64_get(entry, vcpu_index) }
+    unsafe { crate::sys::qemu_plugin_u64_get(entry.inner, vcpu_index) }
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 /// Set the value of a `PluginU64` for a given VCPU
 pub fn qemu_plugin_u64_set(entry: PluginU64, vcpu_index: VCPUIndex, value: u64) {
-    unsafe { crate::sys::qemu_plugin_u64_set(entry, vcpu_index, value) }
+    unsafe { crate::sys::qemu_plugin_u64_set(entry.inner, vcpu_index, value) }
 }
 
 #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
 /// Get the sum of all VCPU entries in a scoreboard
 pub fn qemu_plugin_scoreboard_sum(entry: PluginU64) -> u64 {
-    unsafe { crate::sys::qemu_plugin_u64_sum(entry) }
+    unsafe { crate::sys::qemu_plugin_u64_sum(entry.inner) }
 }
