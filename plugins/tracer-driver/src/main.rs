@@ -55,6 +55,17 @@ struct Args {
     #[clap(short = 'r', long)]
     /// Whether registers should be logged
     pub log_registers: bool,
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5",
+    )))]
+    #[clap(short = 'd', long)]
+    /// Whether discontinuities should be logged
+    pub log_discons: bool,
     #[clap(short = 'a', long)]
     /// Whether all events should be logged
     pub log_all: bool,
@@ -85,6 +96,15 @@ impl Args {
         );
         #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
         let res = format!("{res},log_registers={}", self.log_registers | self.log_all);
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5",
+        )))]
+        let res = format!("{res},log_discons={}", self.log_discons | self.log_all);
         res
     }
 
