@@ -32,7 +32,6 @@ fn tmp(prefix: &str, suffix: &str) -> PathBuf {
     ))
 }
 
-#[cfg(any(feature = "plugin-api-v0", feature = "plugin-api-v1"))]
 #[derive(Parser, Debug, Clone)]
 /// Run QEMU with a plugin that logs events. To pass arguments to QEMU, use the QEMU environment
 /// variables.
@@ -52,46 +51,7 @@ struct Args {
     #[clap(short = 's', long)]
     /// Whether syscalls should be logged
     pub log_syscalls: bool,
-    #[clap(short = 'a', long)]
-    /// Whether all events should be logged
-    pub log_all: bool,
-    #[clap(short = 'I', long)]
-    /// An input file to use as the program's stdin, otherwise the driver's stdin is used
-    pub input_file: Option<PathBuf>,
-    #[clap(short = 'O', long)]
-    /// An output file to write the trace to, otherwise stdout is used
-    pub output_file: Option<PathBuf>,
-    #[clap(short = 'L', long, default_value_t = LevelFilter::INFO)]
-    /// The log level (error, warn, info, debug, trace)
-    pub log_level: LevelFilter,
-    /// The program to run
-    #[clap()]
-    pub program: PathBuf,
-    /// The arguments to the program
-    #[clap(num_args = 1.., last = true)]
-    pub args: Vec<String>,
-}
-
-#[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-#[derive(Parser, Debug, Clone)]
-/// Run QEMU with a plugin that logs events. To pass arguments to QEMU, use the QEMU environment
-/// variables.
-struct Args {
-    #[clap(short = 'Q', long, default_value = "qemu-x86_64")]
-    /// The alternative QEMU binary to use
-    pub qemu_bin: PathBuf,
-    #[clap(short = 'P', long)]
-    /// The path to the plugin to use
-    pub plugin_path: PathBuf,
-    #[clap(short = 'i', long)]
-    /// Whether instructions should be logged
-    pub log_insns: bool,
-    #[clap(short = 'm', long)]
-    /// Whether memory accesses should be logged
-    pub log_mem: bool,
-    #[clap(short = 's', long)]
-    /// Whether syscalls should be logged
-    pub log_syscalls: bool,
+    #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
     #[clap(short = 'r', long)]
     /// Whether registers should be logged
     pub log_registers: bool,
