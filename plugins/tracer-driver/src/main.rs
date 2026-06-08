@@ -77,25 +77,15 @@ struct Args {
 
 impl Args {
     fn to_plugin_args(&self) -> String {
-        #[cfg(any(feature = "plugin-api-v0", feature = "plugin-api-v1"))]
-        {
-            format!(
-                "log_insns={},log_mem={},log_syscalls={}",
-                self.log_insns | self.log_all,
-                self.log_mem | self.log_all,
-                self.log_syscalls | self.log_all,
-            )
-        }
+        let res = format!(
+            "log_insns={},log_mem={},log_syscalls={}",
+            self.log_insns | self.log_all,
+            self.log_mem | self.log_all,
+            self.log_syscalls | self.log_all,
+        );
         #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-        {
-            format!(
-                "log_insns={},log_mem={},log_syscalls={},log_registers={}",
-                self.log_insns | self.log_all,
-                self.log_mem | self.log_all,
-                self.log_syscalls | self.log_all,
-                self.log_registers | self.log_all,
-            )
-        }
+        let res = format!("{res},log_registers={}", self.log_registers | self.log_all);
+        res
     }
 
     fn to_qemu_args(&self, socket_path: &Path, plugin_path: &Path) -> Result<Vec<String>> {
