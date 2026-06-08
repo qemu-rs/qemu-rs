@@ -385,91 +385,51 @@ impl TryFrom<&Args> for PluginArgs {
     type Error = Error;
 
     fn try_from(value: &Args) -> Result<Self> {
-        #[cfg(any(feature = "plugin-api-v0", feature = "plugin-api-v1"))]
-        {
-            Ok(Self::builder()
-                .log_insns(
-                    value
-                        .parsed
-                        .get("log_insns")
-                        .map(|li| if let Value::Bool(v) = li { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_mem(
-                    value
-                        .parsed
-                        .get("log_mem")
-                        .map(|lm| if let Value::Bool(v) = lm { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_syscalls(
-                    value
-                        .parsed
-                        .get("log_syscalls")
-                        .map(|ls| if let Value::Bool(v) = ls { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .socket_path(
-                    value
-                        .parsed
-                        .get("socket_path")
-                        .and_then(|sp| {
-                            if let Value::String(v) = sp {
-                                Some(PathBuf::from(v))
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| anyhow!("No socket path provided"))?,
-                )
-                .build())
-        }
+        let builder = Self::builder()
+            .log_insns(
+                value
+                    .parsed
+                    .get("log_insns")
+                    .map(|li| if let Value::Bool(v) = li { *v } else { false })
+                    .unwrap_or_default(),
+            )
+            .log_mem(
+                value
+                    .parsed
+                    .get("log_mem")
+                    .map(|lm| if let Value::Bool(v) = lm { *v } else { false })
+                    .unwrap_or_default(),
+            )
+            .log_syscalls(
+                value
+                    .parsed
+                    .get("log_syscalls")
+                    .map(|ls| if let Value::Bool(v) = ls { *v } else { false })
+                    .unwrap_or_default(),
+            );
         #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-        {
-            Ok(Self::builder()
-                .log_insns(
-                    value
-                        .parsed
-                        .get("log_insns")
-                        .map(|li| if let Value::Bool(v) = li { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_mem(
-                    value
-                        .parsed
-                        .get("log_mem")
-                        .map(|lm| if let Value::Bool(v) = lm { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_syscalls(
-                    value
-                        .parsed
-                        .get("log_syscalls")
-                        .map(|ls| if let Value::Bool(v) = ls { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_registers(
-                    value
-                        .parsed
-                        .get("log_registers")
-                        .map(|lr| if let Value::Bool(v) = lr { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .socket_path(
-                    value
-                        .parsed
-                        .get("socket_path")
-                        .and_then(|sp| {
-                            if let Value::String(v) = sp {
-                                Some(PathBuf::from(v))
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| anyhow!("No socket path provided"))?,
-                )
-                .build())
-        }
+        let builder = builder.log_registers(
+            value
+                .parsed
+                .get("log_registers")
+                .map(|lr| if let Value::Bool(v) = lr { *v } else { false })
+                .unwrap_or_default(),
+        );
+        Ok(builder
+            .socket_path(
+                value
+                    .parsed
+                    .get("socket_path")
+                    .and_then(|sp| {
+                        if let Value::String(v) = sp {
+                            Some(PathBuf::from(v))
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| anyhow!("No socket path provided"))?,
+            )
+            .build())
     }
 }
 
