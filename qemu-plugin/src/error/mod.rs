@@ -143,6 +143,16 @@ pub enum Error {
         /// The virtual address that failed to translate
         vaddr: u64,
     },
+    #[error(
+        "Attempt to address element at offset {offset} in score board entry of size {entry_size}"
+    )]
+    /// Error when attempting to create a scoreboard entry with an illegal offset
+    InvalidScoreBoardEntryOffset {
+        /// Offset into the entry
+        offset: usize,
+        /// Size of the entry
+        entry_size: usize,
+    },
     #[error("Error while setting global plugin instance")]
     /// Error when setting the global plugin instance fails
     PluginInstanceSetError,

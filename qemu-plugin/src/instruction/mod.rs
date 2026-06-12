@@ -10,7 +10,7 @@ use crate::{
     feature = "plugin-api-v1",
     feature = "plugin-api-v2"
 )))]
-use crate::{PluginCondition, PluginU64};
+use crate::{PluginCondition, scoreboard::PluginU64};
 use std::{
     ffi::{CStr, c_void},
     marker::PhantomData,
@@ -287,7 +287,7 @@ impl<'a> Instruction<'a> {
                 Some(handle_qemu_plugin_register_vcpu_insn_exec_cb::<F>),
                 flags,
                 cond,
-                entry,
+                entry.inner,
                 immediate,
                 userdata,
             )
