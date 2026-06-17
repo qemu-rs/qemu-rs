@@ -11,6 +11,16 @@ use crate::{
     qemu_plugin_register_vcpu_tb_trans_cb,
 };
 
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+use crate::{qemu_plugin_discon_type, qemu_plugin_register_vcpu_discon_cb};
+
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_init_cb`
 /// function. These callbacks are called when a vCPU is initialized in QEMU (in softmmu
 /// mode only) and notify us which vCPU index is newly initialized.
@@ -77,6 +87,96 @@ extern "C" fn handle_qemu_plugin_register_vcpu_resume_cb(id: PluginId, vcpu_id: 
     plugin
         .on_vcpu_resume(id, vcpu_id)
         .expect("Failed running callback on_vcpu_resume");
+}
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Handler for callbacks registered via the `qemu_plugin_register_vcpu_discon_cb`
+/// function for interrupts.
+extern "C" fn handle_qemu_plugin_register_vcpu_interrupt(
+    id: PluginId,
+    vcpu_id: VCPUIndex,
+    _: qemu_plugin_discon_type,
+    from_pc: u64,
+    to_pc: u64,
+) {
+    let Some(plugin) = PLUGIN.get() else {
+        panic!("Plugin not set");
+    };
+
+    let Ok(mut plugin) = plugin.lock() else {
+        panic!("Failed to lock plugin");
+    };
+
+    plugin
+        .on_vcpu_interrupt(id, vcpu_id, from_pc, to_pc)
+        .expect("Failed running callback on_vcpu_interrupt");
+}
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Handler for callbacks registered via the `qemu_plugin_register_vcpu_discon_cb`
+/// function for exceptions.
+extern "C" fn handle_qemu_plugin_register_vcpu_exception(
+    id: PluginId,
+    vcpu_id: VCPUIndex,
+    _: qemu_plugin_discon_type,
+    from_pc: u64,
+    to_pc: u64,
+) {
+    let Some(plugin) = PLUGIN.get() else {
+        panic!("Plugin not set");
+    };
+
+    let Ok(mut plugin) = plugin.lock() else {
+        panic!("Failed to lock plugin");
+    };
+
+    plugin
+        .on_vcpu_exception(id, vcpu_id, from_pc, to_pc)
+        .expect("Failed running callback on_vcpu_exception");
+}
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Handler for callbacks registered via the `qemu_plugin_register_vcpu_discon_cb`
+/// function for host calls.
+extern "C" fn handle_qemu_plugin_register_vcpu_hostcall(
+    id: PluginId,
+    vcpu_id: VCPUIndex,
+    _: qemu_plugin_discon_type,
+    from_pc: u64,
+    to_pc: u64,
+) {
+    let Some(plugin) = PLUGIN.get() else {
+        panic!("Plugin not set");
+    };
+
+    let Ok(mut plugin) = plugin.lock() else {
+        panic!("Failed to lock plugin");
+    };
+
+    plugin
+        .on_vcpu_hostcall(id, vcpu_id, from_pc, to_pc)
+        .expect("Failed running callback on_vcpu_hostcall");
 }
 
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_tb_trans_cb`
@@ -260,6 +360,32 @@ pub trait Register: HasCallbacks + Send + Sync + 'static {
 
         qemu_plugin_register_vcpu_resume_cb(id, Some(handle_qemu_plugin_register_vcpu_resume_cb))?;
 
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        )))]
+        {
+            qemu_plugin_register_vcpu_discon_cb(
+                id,
+                qemu_plugin_discon_type::QEMU_PLUGIN_DISCON_INTERRUPT,
+                Some(handle_qemu_plugin_register_vcpu_interrupt),
+            )?;
+            qemu_plugin_register_vcpu_discon_cb(
+                id,
+                qemu_plugin_discon_type::QEMU_PLUGIN_DISCON_EXCEPTION,
+                Some(handle_qemu_plugin_register_vcpu_exception),
+            )?;
+            qemu_plugin_register_vcpu_discon_cb(
+                id,
+                qemu_plugin_discon_type::QEMU_PLUGIN_DISCON_HOSTCALL,
+                Some(handle_qemu_plugin_register_vcpu_hostcall),
+            )?;
+        }
+
         qemu_plugin_register_vcpu_tb_trans_cb(
             id,
             Some(handle_qemu_plugin_register_vcpu_tb_trans_cb),
@@ -366,6 +492,89 @@ pub trait HasCallbacks: Send + Sync + 'static {
     /// * `id` - The ID of the plugin
     /// * `vcpu_id` - The ID of the vCPU
     fn on_vcpu_resume(&mut self, id: PluginId, vcpu_id: VCPUIndex) -> Result<()> {
+        Ok(())
+    }
+
+    #[allow(unused)]
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5"
+    )))]
+    /// Callback triggered on vCPU interrupts
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the plugin
+    /// * `vcpu_id` - The ID of the vCPU
+    /// * `from_pc` - The PC of the instruction that would have been executed
+    ///               next, had the interrupt not occurred.
+    /// * `to_pc` - The PC of the instruction that the interrupt trapped to
+    fn on_vcpu_interrupt(
+        &mut self,
+        id: PluginId,
+        vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    #[allow(unused)]
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5"
+    )))]
+    /// Callback triggered on vCPU exceptions
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the plugin
+    /// * `vcpu_id` - The ID of the vCPU
+    /// * `from_pc` - The PC of the instruction that caused the exception
+    /// * `to_pc` - The PC of the instruction that the exception trapped to
+    fn on_vcpu_exception(
+        &mut self,
+        id: PluginId,
+        vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    #[allow(unused)]
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5"
+    )))]
+    /// Callback triggered on vCPU host calls
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the plugin
+    /// * `vcpu_id` - The ID of the vCPU
+    /// * `from_pc` - The PC of the instruction that issued the host call
+    /// * `to_pc` - The PC of the instruction that will be executed after the
+    ///             host call
+    fn on_vcpu_hostcall(
+        &mut self,
+        id: PluginId,
+        vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
         Ok(())
     }
 

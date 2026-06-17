@@ -39,6 +39,24 @@ pub struct SyscallEvent {
     pub buffers: HashMap<usize, Vec<u8>>,
 }
 
+#[derive(TypedBuilder, Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Interrupt {
+    pub vaddr: u64,
+    pub handler: u64,
+}
+
+#[derive(TypedBuilder, Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Exception {
+    pub epc: u64,
+    pub handler: u64,
+}
+
+#[derive(TypedBuilder, Clone, Debug, Default, Deserialize, Serialize)]
+pub struct HostCall {
+    pub vaddr: u64,
+    pub next: u64,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Registers(pub HashMap<String, Vec<u8>>);
 
@@ -50,4 +68,7 @@ pub enum Event {
     },
     Memory(MemoryEvent),
     Syscall(SyscallEvent),
+    Interrupt(Interrupt),
+    Exception(Exception),
+    HostCall(HostCall),
 }
