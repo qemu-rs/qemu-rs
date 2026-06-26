@@ -2,15 +2,6 @@
 
 use std::sync::{Mutex, OnceLock};
 
-#[cfg(not(any(
-    feature = "plugin-api-v0",
-    feature = "plugin-api-v1",
-    feature = "plugin-api-v2",
-    feature = "plugin-api-v3",
-    feature = "plugin-api-v4",
-    feature = "plugin-api-v5"
-)))]
-use crate::qemu_plugin_register_vcpu_syscall_filter_cb;
 use crate::{
     Args, Error, Info, PluginId, Result, TranslationBlock, VCPUIndex,
     qemu_plugin_register_atexit_cb, qemu_plugin_register_flush_cb,
@@ -19,6 +10,15 @@ use crate::{
     qemu_plugin_register_vcpu_syscall_cb, qemu_plugin_register_vcpu_syscall_ret_cb,
     qemu_plugin_register_vcpu_tb_trans_cb,
 };
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+use {crate::qemu_plugin_register_vcpu_syscall_filter_cb, std::ops::ControlFlow};
 
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_init_cb`
 /// function. These callbacks are called when a vCPU is initialized in QEMU (in softmmu
@@ -228,19 +228,22 @@ extern "C" fn handle_qemu_plugin_register_syscall_filter_cb(
         panic!("Failed to lock plugin");
     };
 
-    // SAFETY: QEMU's code is paused (i.e., higher up the call stack) while this callback is
-    // running, so there are no concurrent accesses to the `sysret` pointer. This pointer is a
-    // pointer to a stack variable in QEMU's code, so it's guaranteed to be valid and alive for the
-    // duration of this callback.
-    let Some(sysret) = (unsafe { sysret.as_mut() }) else {
-        // This should never happen, since QEMU always passes a valid stack pointer. Just to be on
-        // the safe side, let's panic here.
-        panic!("sysret pointer is null");
-    };
-
-    plugin
-        .on_syscall_filter(id, vcpu_index, num, a1, a2, a3, a4, a5, a6, a7, a8, sysret)
+    match plugin
+        .on_syscall_filter(id, vcpu_index, num, a1, a2, a3, a4, a5, a6, a7, a8)
         .expect("Failed running callback on_syscall_filter")
+    {
+        ControlFlow::Continue(()) => false,
+        ControlFlow::Break(retval) => {
+            // SAFETY: QEMU's code is paused (i.e., higher up the call stack) while this callback is
+            // running, so there are no concurrent accesses to the `sysret` pointer. This pointer is a
+            // pointer to a stack variable in QEMU's code, so it's guaranteed to be valid and alive for the
+            // duration of this callback.
+            unsafe {
+                *sysret = retval;
+            }
+            true
+        }
+    }
 }
 
 /// Trait which implemenents registering the callbacks implemented on a struct which
@@ -547,11 +550,12 @@ pub trait HasCallbacks: Send + Sync + 'static {
     /// * `a6` - The sixth syscall argument
     /// * `a7` - The seventh syscall argument
     /// * `a8` - The eighth syscall argument
-    /// - `sysret`: A mutable reference to the syscall return value
     ///
     /// # Return value
     ///
-    /// * `bool`: Whether to skip executing the syscall and return the value of `sysret` instead
+    /// * `ControlFlow<u64>`: Whether to skip executing the syscall and return the wrapped
+    ///   value of `ControlFlow::Break(u64)` instead, or to continue executing the syscall
+    ///   with `ControlFlow::Continue(())`.
     fn on_syscall_filter(
         &mut self,
         id: PluginId,
@@ -565,9 +569,8 @@ pub trait HasCallbacks: Send + Sync + 'static {
         a6: u64,
         a7: u64,
         a8: u64,
-        sysret: &mut u64,
-    ) -> Result<bool> {
-        Ok(false)
+    ) -> Result<ControlFlow<u64>> {
+        Ok(ControlFlow::Continue(()))
     }
 }
 
