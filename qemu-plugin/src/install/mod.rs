@@ -96,14 +96,14 @@ pub struct Version {
     /// Current plugin API version
     pub current: i64,
     /// Minimum plugin API version
-    pub mininum: i64,
+    pub minimum: i64,
 }
 
 impl From<&qemu_info_t__bindgen_ty_1> for Version {
     fn from(value: &qemu_info_t__bindgen_ty_1) -> Self {
         Self {
             current: value.cur as i64,
-            mininum: value.min as i64,
+            minimum: value.min as i64,
         }
     }
 }
