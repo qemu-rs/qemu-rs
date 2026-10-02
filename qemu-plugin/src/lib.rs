@@ -958,3 +958,24 @@ pub fn qemu_plugin_u64_set(entry: PluginU64, vcpu_index: VCPUIndex, value: u64) 
 pub fn qemu_plugin_scoreboard_sum(entry: PluginU64) -> u64 {
     unsafe { crate::sys::qemu_plugin_u64_sum(entry) }
 }
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Set the program counter for the current vCPU
+///
+/// This function never returns, as it directly hands control back to QEMU and
+/// continues guest execution at the specified address.
+///
+/// # Arguments
+///
+/// - `vaddr`: the (virtual) address at which to resume guest execution
+///
+pub fn qemu_plugin_set_pc(vaddr: u64) -> ! {
+    unsafe { crate::sys::qemu_plugin_set_pc(vaddr) };
+}
