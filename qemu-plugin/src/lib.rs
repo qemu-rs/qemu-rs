@@ -250,7 +250,7 @@ extern "C" fn handle_qemu_plugin_uninstall_callback(id: qemu_plugin_id_t) {
 /// Handle the invocation of the reset callback by calling the stored
 /// callback closure, if one exists.
 extern "C" fn handle_qemu_plugin_reset_callback(id: qemu_plugin_id_t) {
-    if let Some(callback) = UNINSTALL_CALLBACK.get()
+    if let Some(callback) = RESET_CALLBACK.get()
         && let Ok(mut callback) = callback.lock()
         && let Some(callback) = callback.take()
     {
