@@ -276,6 +276,7 @@ jobs:
 
     env:
       QEMU_VERSION: "11.0.0-1"
+      LIBNFS_VERSION: "5.0.3-1"
       RUSTUP_URL: "https://win.rustup.rs/x86_64"
       FEDORA_CLOUDIMG_URL: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
 
@@ -290,7 +291,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: C:\msys-custom
-          key: ${{ runner.os }}-msys2-${{ env.QEMU_VERSION }}
+          key: ${{ runner.os }}-msys2-${{ env.QEMU_VERSION }}-libnfs-${{ env.LIBNFS_VERSION }}
 
       - name: Install MSYS2 and QEMU
         uses: msys2/setup-msys2@v2
@@ -298,8 +299,24 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-qemu=${{ env.QEMU_VERSION }}
+          install: git mingw-w64-ucrt-x86_64-gcc
           location: C:\msys-custom
+
+      # pacman -S can only install the latest version in the sync db, so install
+      # the pinned QEMU version directly from the MSYS2 package archive. The qemu
+      # split packages are pinned too, and libnfs is pinned to the version that
+      # provides libnfs-14.dll, which QEMU 11.0.0-1 links against.
+      - name: Install pinned QEMU
+        if: steps.msys2-cache.outputs.cache-hit != 'true'
+        shell: msys2 {0}
+        run: |
+          repo=https://repo.msys2.org/mingw/ucrt64
+          pacman -U --noconfirm \
+            $repo/mingw-w64-ucrt-x86_64-libnfs-${{ env.LIBNFS_VERSION }}-any.pkg.tar.zst \
+            $repo/mingw-w64-ucrt-x86_64-qemu-common-${{ env.QEMU_VERSION }}-any.pkg.tar.zst \
+            $repo/mingw-w64-ucrt-x86_64-qemu-guest-agent-${{ env.QEMU_VERSION }}-any.pkg.tar.zst \
+            $repo/mingw-w64-ucrt-x86_64-qemu-image-util-${{ env.QEMU_VERSION }}-any.pkg.tar.zst \
+            $repo/mingw-w64-ucrt-x86_64-qemu-${{ env.QEMU_VERSION }}-any.pkg.tar.zst
 
       - name: Download and Install Rust
         run: |
