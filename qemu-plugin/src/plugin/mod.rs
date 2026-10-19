@@ -10,6 +10,15 @@ use crate::{
     qemu_plugin_register_vcpu_syscall_cb, qemu_plugin_register_vcpu_syscall_ret_cb,
     qemu_plugin_register_vcpu_tb_trans_cb,
 };
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+use {crate::qemu_plugin_register_vcpu_syscall_filter_cb, std::ops::ControlFlow};
 
 /// Handler for callbacks registered via the `qemu_plugin_register_vcpu_init_cb`
 /// function. These callbacks are called when a vCPU is initialized in QEMU (in softmmu
@@ -185,6 +194,58 @@ extern "C" fn handle_qemu_plugin_register_syscall_ret_cb(
         .expect("Failed running callback on_syscall_return");
 }
 
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Handler for callbacks registered via the `qemu_plugin_register_vcpu_syscall_filter_cb`
+/// function. These callbacks are called when a syscall is made in QEMU and pass the syscall number
+/// and its arguments. They also allow filtering the syscall by modifying the return value via the
+/// `sysret` reference and returning `true` to indicate the actual syscall should be skipped.
+extern "C" fn handle_qemu_plugin_register_syscall_filter_cb(
+    id: PluginId,
+    vcpu_index: VCPUIndex,
+    num: i64,
+    a1: u64,
+    a2: u64,
+    a3: u64,
+    a4: u64,
+    a5: u64,
+    a6: u64,
+    a7: u64,
+    a8: u64,
+    sysret: *mut u64,
+) -> bool {
+    let Some(plugin) = PLUGIN.get() else {
+        panic!("Plugin not set");
+    };
+
+    let Ok(mut plugin) = plugin.lock() else {
+        panic!("Failed to lock plugin");
+    };
+
+    match plugin
+        .on_syscall_filter(id, vcpu_index, num, a1, a2, a3, a4, a5, a6, a7, a8)
+        .expect("Failed running callback on_syscall_filter")
+    {
+        ControlFlow::Continue(()) => false,
+        ControlFlow::Break(retval) => {
+            // SAFETY: QEMU's code is paused (i.e., higher up the call stack) while this callback is
+            // running, so there are no concurrent accesses to the `sysret` pointer. This pointer is a
+            // pointer to a stack variable in QEMU's code, so it's guaranteed to be valid and alive for the
+            // duration of this callback.
+            unsafe {
+                *sysret = retval;
+            }
+            true
+        }
+    }
+}
+
 /// Trait which implemenents registering the callbacks implemented on a struct which
 /// `HasCallbacks` with QEMU
 ///
@@ -276,6 +337,19 @@ pub trait Register: HasCallbacks + Send + Sync + 'static {
         qemu_plugin_register_vcpu_syscall_ret_cb(
             id,
             Some(handle_qemu_plugin_register_syscall_ret_cb),
+        );
+
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5"
+        )))]
+        qemu_plugin_register_vcpu_syscall_filter_cb(
+            id,
+            Some(handle_qemu_plugin_register_syscall_filter_cb),
         );
 
         self.register(id, args, info)?;
@@ -450,6 +524,53 @@ pub trait HasCallbacks: Send + Sync + 'static {
         ret: i64,
     ) -> Result<()> {
         Ok(())
+    }
+
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5"
+    )))]
+    #[allow(unused, clippy::too_many_arguments)]
+    /// Callback triggered on syscall, allows filtering the syscall
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the plugin
+    /// * `vcpu_index` - The ID of the vCPU
+    /// * `num` - The syscall number
+    /// * `a1` - The first syscall argument
+    /// * `a2` - The second syscall argument
+    /// * `a3` - The third syscall argument
+    /// * `a4` - The fourth syscall argument
+    /// * `a5` - The fifth syscall argument
+    /// * `a6` - The sixth syscall argument
+    /// * `a7` - The seventh syscall argument
+    /// * `a8` - The eighth syscall argument
+    ///
+    /// # Return value
+    ///
+    /// * `ControlFlow<u64>`: Whether to skip executing the syscall and return the wrapped
+    ///   value of `ControlFlow::Break(u64)` instead, or to continue executing the syscall
+    ///   with `ControlFlow::Continue(())`.
+    fn on_syscall_filter(
+        &mut self,
+        id: PluginId,
+        vcpu_index: VCPUIndex,
+        num: i64,
+        a1: u64,
+        a2: u64,
+        a3: u64,
+        a4: u64,
+        a5: u64,
+        a6: u64,
+        a7: u64,
+        a8: u64,
+    ) -> Result<ControlFlow<u64>> {
+        Ok(ControlFlow::Continue(()))
     }
 }
 

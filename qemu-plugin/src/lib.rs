@@ -62,6 +62,15 @@
 #[cfg(windows)]
 mod win_link_hook;
 
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+use crate::sys::qemu_plugin_vcpu_syscall_filter_cb_t;
 use crate::sys::{
     qemu_plugin_cb_flags, qemu_plugin_id_t, qemu_plugin_insn, qemu_plugin_mem_rw,
     qemu_plugin_meminfo_t, qemu_plugin_op, qemu_plugin_simple_cb_t, qemu_plugin_tb,
@@ -209,6 +218,37 @@ pub type SyscallCallback = qemu_plugin_vcpu_syscall_cb_t;
 /// - `num`: The syscall number
 /// - `ret`: The syscall return value
 pub type SyscallReturnCallback = qemu_plugin_vcpu_syscall_ret_cb_t;
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// A callback called on Syscall entry, with the option to set the syscall's
+/// return value and skip executing it
+///
+/// # Arguments
+///
+/// - `id`: The plugin ID
+/// - `vcpu_index`: The index of the vCPU that executed the instruction
+/// - `num`: The syscall number
+/// - `a1`: The first syscall argument
+/// - `a2`: The second syscall argument
+/// - `a3`: The third syscall argument
+/// - `a4`: The fourth syscall argument
+/// - `a5`: The fifth syscall argument
+/// - `a6`: The sixth syscall argument
+/// - `a7`: The seventh syscall argument
+/// - `a8`: The eighth syscall argument
+/// - `sysret`: A pointer to the syscall return value
+///
+/// # Return value
+///
+/// * `bool`: Whether to skip executing the syscall and return the value of `sysret` instead
+pub type SyscallFilterCallback = qemu_plugin_vcpu_syscall_filter_cb_t;
 
 /// A callback called when execution has finished and the plugin should free its resources
 ///
@@ -760,6 +800,28 @@ pub fn qemu_plugin_register_vcpu_syscall_cb(id: qemu_plugin_id_t, cb: SyscallCal
 /// - `cb`: The callback to be called
 pub fn qemu_plugin_register_vcpu_syscall_ret_cb(id: qemu_plugin_id_t, cb: SyscallReturnCallback) {
     unsafe { crate::sys::qemu_plugin_register_vcpu_syscall_ret_cb(id, cb) };
+}
+
+#[cfg(not(any(
+    feature = "plugin-api-v0",
+    feature = "plugin-api-v1",
+    feature = "plugin-api-v2",
+    feature = "plugin-api-v3",
+    feature = "plugin-api-v4",
+    feature = "plugin-api-v5"
+)))]
+/// Register a callback to run on Syscall entry, with the option to set the
+/// syscall's return value and skip executing it
+///
+/// # Arguments
+///
+/// - `id`: The plugin ID
+/// - `cb`: The callback to be called
+pub fn qemu_plugin_register_vcpu_syscall_filter_cb(
+    id: qemu_plugin_id_t,
+    cb: SyscallFilterCallback,
+) {
+    unsafe { crate::sys::qemu_plugin_register_vcpu_syscall_filter_cb(id, cb) };
 }
 
 /// Output a string via the QEMU logging mechanism
