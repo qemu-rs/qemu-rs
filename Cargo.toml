@@ -8,7 +8,7 @@ license = "GPL-2.0-or-later"
 publish = true
 readme = "README.md"
 repository = "https://github.com/novafacing/qemu-rs"
-version = "10.1.0-v2"
+version = "11.0.0"
 rust-version = "1.88"
 
 [workspace]
@@ -26,5 +26,5 @@ members = [
 default-members = ["qemu-plugin", "qemu-plugin-sys"]
 
 [workspace.dependencies]
-qemu-plugin = { version = "10.1.0-v2", path = "qemu-plugin", default-features = false }
-qemu-plugin-sys = { version = "10.1.0-v2", path = "qemu-plugin-sys", default-features = false }
+qemu-plugin = { version = "11.0.0", path = "qemu-plugin", default-features = false }
+qemu-plugin-sys = { version = "11.0.0", path = "qemu-plugin-sys", default-features = false }
