@@ -9,7 +9,7 @@ use crate::{
     feature = "plugin-api-v1",
     feature = "plugin-api-v2"
 )))]
-use crate::{PluginCondition, PluginU64};
+use crate::{PluginCondition, scoreboard::PluginU64};
 use std::{ffi::c_void, marker::PhantomData};
 
 #[derive(Debug, Clone)]
@@ -193,7 +193,7 @@ impl<'a> TranslationBlock<'a> {
                 Some(handle_qemu_plugin_register_vcpu_tb_exec_cb::<F>),
                 flags,
                 cond,
-                entry,
+                entry.inner,
                 immediate,
                 userdata,
             )
