@@ -95,6 +95,16 @@ struct Tracer {
     #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
     #[builder(default)]
     pub log_registers: bool,
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5",
+    )))]
+    #[builder(default)]
+    pub log_discons: bool,
 }
 
 impl Tracer {
@@ -369,6 +379,108 @@ impl HasCallbacks for Tracer {
 
         Ok(())
     }
+
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5",
+    )))]
+    fn on_vcpu_interrupt(
+        &mut self,
+        _id: PluginId,
+        _vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
+        if self.log_discons {
+            let event = tracer_events::Interrupt {
+                vaddr: from_pc,
+                handler: to_pc,
+            };
+            self.tx
+                .lock()
+                .map_err(|e| anyhow!("Failed to lock tx: {}", e))
+                .and_then(|tx| {
+                    to_writer(
+                        tx.as_ref().ok_or_else(|| anyhow!("No tx"))?,
+                        &Event::Interrupt(event),
+                    )
+                    .map_err(|e| anyhow!(e))
+                })?
+        }
+        Ok(())
+    }
+
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5",
+    )))]
+    fn on_vcpu_exception(
+        &mut self,
+        _id: PluginId,
+        _vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
+        if self.log_discons {
+            let event = tracer_events::Exception {
+                epc: from_pc,
+                handler: to_pc,
+            };
+            self.tx
+                .lock()
+                .map_err(|e| anyhow!("Failed to lock tx: {}", e))
+                .and_then(|tx| {
+                    to_writer(
+                        tx.as_ref().ok_or_else(|| anyhow!("No tx"))?,
+                        &Event::Exception(event),
+                    )
+                    .map_err(|e| anyhow!(e))
+                })?
+        }
+        Ok(())
+    }
+
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5",
+    )))]
+    fn on_vcpu_hostcall(
+        &mut self,
+        _id: PluginId,
+        _vcpu_id: VCPUIndex,
+        from_pc: u64,
+        to_pc: u64,
+    ) -> Result<()> {
+        if self.log_discons {
+            let event = tracer_events::HostCall {
+                vaddr: from_pc,
+                next: to_pc,
+            };
+            self.tx
+                .lock()
+                .map_err(|e| anyhow!("Failed to lock tx: {}", e))
+                .and_then(|tx| {
+                    to_writer(
+                        tx.as_ref().ok_or_else(|| anyhow!("No tx"))?,
+                        &Event::HostCall(event),
+                    )
+                    .map_err(|e| anyhow!(e))
+                })?
+        }
+        Ok(())
+    }
 }
 
 #[derive(TypedBuilder, Clone, Debug)]
@@ -378,6 +490,15 @@ pub struct PluginArgs {
     pub log_syscalls: bool,
     #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
     pub log_registers: bool,
+    #[cfg(not(any(
+        feature = "plugin-api-v0",
+        feature = "plugin-api-v1",
+        feature = "plugin-api-v2",
+        feature = "plugin-api-v3",
+        feature = "plugin-api-v4",
+        feature = "plugin-api-v5",
+    )))]
+    pub log_discons: bool,
     pub socket_path: PathBuf,
 }
 
@@ -385,91 +506,66 @@ impl TryFrom<&Args> for PluginArgs {
     type Error = Error;
 
     fn try_from(value: &Args) -> Result<Self> {
-        #[cfg(any(feature = "plugin-api-v0", feature = "plugin-api-v1"))]
-        {
-            Ok(Self::builder()
-                .log_insns(
-                    value
-                        .parsed
-                        .get("log_insns")
-                        .map(|li| if let Value::Bool(v) = li { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_mem(
-                    value
-                        .parsed
-                        .get("log_mem")
-                        .map(|lm| if let Value::Bool(v) = lm { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_syscalls(
-                    value
-                        .parsed
-                        .get("log_syscalls")
-                        .map(|ls| if let Value::Bool(v) = ls { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .socket_path(
-                    value
-                        .parsed
-                        .get("socket_path")
-                        .and_then(|sp| {
-                            if let Value::String(v) = sp {
-                                Some(PathBuf::from(v))
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| anyhow!("No socket path provided"))?,
-                )
-                .build())
-        }
+        let builder = Self::builder()
+            .log_insns(
+                value
+                    .parsed
+                    .get("log_insns")
+                    .map(|li| if let Value::Bool(v) = li { *v } else { false })
+                    .unwrap_or_default(),
+            )
+            .log_mem(
+                value
+                    .parsed
+                    .get("log_mem")
+                    .map(|lm| if let Value::Bool(v) = lm { *v } else { false })
+                    .unwrap_or_default(),
+            )
+            .log_syscalls(
+                value
+                    .parsed
+                    .get("log_syscalls")
+                    .map(|ls| if let Value::Bool(v) = ls { *v } else { false })
+                    .unwrap_or_default(),
+            );
         #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
-        {
-            Ok(Self::builder()
-                .log_insns(
-                    value
-                        .parsed
-                        .get("log_insns")
-                        .map(|li| if let Value::Bool(v) = li { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_mem(
-                    value
-                        .parsed
-                        .get("log_mem")
-                        .map(|lm| if let Value::Bool(v) = lm { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_syscalls(
-                    value
-                        .parsed
-                        .get("log_syscalls")
-                        .map(|ls| if let Value::Bool(v) = ls { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .log_registers(
-                    value
-                        .parsed
-                        .get("log_registers")
-                        .map(|lr| if let Value::Bool(v) = lr { *v } else { false })
-                        .unwrap_or_default(),
-                )
-                .socket_path(
-                    value
-                        .parsed
-                        .get("socket_path")
-                        .and_then(|sp| {
-                            if let Value::String(v) = sp {
-                                Some(PathBuf::from(v))
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| anyhow!("No socket path provided"))?,
-                )
-                .build())
-        }
+        let builder = builder.log_registers(
+            value
+                .parsed
+                .get("log_registers")
+                .map(|lr| if let Value::Bool(v) = lr { *v } else { false })
+                .unwrap_or_default(),
+        );
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5",
+        )))]
+        let builder = builder.log_discons(
+            value
+                .parsed
+                .get("log_discons")
+                .map(|lr| if let Value::Bool(v) = lr { *v } else { false })
+                .unwrap_or_default(),
+        );
+        Ok(builder
+            .socket_path(
+                value
+                    .parsed
+                    .get("socket_path")
+                    .and_then(|sp| {
+                        if let Value::String(v) = sp {
+                            Some(PathBuf::from(v))
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| anyhow!("No socket path provided"))?,
+            )
+            .build())
     }
 }
 
@@ -490,6 +586,18 @@ impl Register for Tracer {
         #[cfg(not(any(feature = "plugin-api-v0", feature = "plugin-api-v1")))]
         {
             self.log_registers = plugin_args.log_registers;
+        }
+
+        #[cfg(not(any(
+            feature = "plugin-api-v0",
+            feature = "plugin-api-v1",
+            feature = "plugin-api-v2",
+            feature = "plugin-api-v3",
+            feature = "plugin-api-v4",
+            feature = "plugin-api-v5",
+        )))]
+        {
+            self.log_discons = plugin_args.log_discons;
         }
 
         Ok(())
